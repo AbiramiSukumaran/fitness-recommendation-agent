@@ -34,7 +34,7 @@ try:
     toolboxCore = ToolboxSyncClient(TOOLBOX_URL)
     
     # Strictly load the toolset mapped in your tools.yaml
-    all_tools = toolboxCore.load_toolset("alloydb_tools")
+    all_tools = toolboxCore.load_toolset("fitness_tools")
     
     print(f"-> MCP Client: Successfully connected to {TOOLBOX_URL}")
     print(f"-> MCP Tools Loaded: {len(all_tools)} tools found.")
