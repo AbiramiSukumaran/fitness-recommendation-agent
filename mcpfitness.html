@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Agent - MCP Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #111827 100%);
+            color: #f3f4f6;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25); 
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Typing indicator animation */
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Prosed styling for responses */
+        .prose strong { color: #f472b6; font-weight: 600; }
+        .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 0.5rem; }
+        .prose li { margin-bottom: 0.25rem; }
+
+        /* Style Select Dropdowns */
+        select option {
+            background-color: #111827;
+            color: white;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <div class="max-w-[1300px] w-full h-full max-h-[850px] flex flex-col lg:flex-row gap-6">
+        
+        <!-- Main Chat Area -->
+        <main class="flex-1 glass-panel rounded-2xl shadow-2xl flex flex-col overflow-hidden relative border-t border-l border-white/5">
+            
+            <!-- Chat Header -->
+            <header class="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-900/30">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-user-tie text-2xl text-pink-400"></i>
+                        <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-200">Fitness Agent</h2>
+                        <p class="text-xs text-gray-400">Connecting BigQuery fitness records via MCP Server</p>
+                    </div>
+                </div>
+                <button onclick="clearChat()" class="text-gray-400 hover:text-white transition-colors" title="Clear Chat">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </header>
+
+            <!-- Chat Messages -->
+            <div id="chat-container" class="flex-1 overflow-y-auto p-6 flex flex-col gap-6 scroll-smooth">
+                <!-- Welcome Message -->
+                <div class="flex gap-4 items-start max-w-[85%]">
+                    <div class="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center shrink-0 shadow-lg">
+                        <i class="fa-solid fa-user-tie text-sm text-white"></i>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl rounded-tl-sm px-5 py-3.5 text-sm text-gray-200 shadow-md">
+                        Hello! I am your AI Fitness Manager. I can help you get going with your fitness routine today.
+                        <br><br>
+                        Select your current state below to generate a highly personalized, data-backed 50-minute workout sequence.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area (Structured Form) -->
+            <div class="p-5 bg-gray-900/60 border-t border-gray-800 backdrop-blur-md">
+                
+                <!-- Thinking Indicator -->
+                <div id="thinking-indicator" class="hidden items-center gap-3 px-1 pb-4 text-sm text-pink-400">
+                    <div class="flex gap-1">
+                        <div class="w-2 h-2 rounded-full bg-pink-400 typing-dot"></div>
+                        <div class="w-2 h-2 rounded-full bg-pink-400 typing-dot"></div>
+                        <div class="w-2 h-2 rounded-full bg-pink-400 typing-dot"></div>
+                    </div>
+                    <span>Agent is evaluating historical BQML records...</span>
+                </div>
+
+                <form id="chat-form" class="flex flex-col gap-4" onsubmit="handleSend(event)">
+                    
+                    <!-- 4-Column Dropdown Panel -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        
+                        <!-- Initials Input -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide"><i class="fa-solid fa-id-badge mr-1"></i> Initials</label>
+                            <input type="text" id="user-name" maxlength="3" pattern="[A-Za-z]{1,3}" class="w-full bg-gray-800/80 border border-gray-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all shadow-inner uppercase" placeholder="ABC" required>
+                        </div>
+
+                        <!-- Mood Select -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide"><i class="fa-solid fa-face-smile-beam mr-1"></i> Current Mood</label>
+                            <select id="select-mood" class="w-full bg-gray-800/80 border border-gray-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all shadow-inner appearance-none cursor-pointer" required>
+                                <option value="" disabled selected>How are you feeling?</option>
+                                <option value="Lethargic">Lethargic</option>
+                                <option value="Sore">Sore</option>
+                                <option value="Energetic">Energetic</option>
+                                <option value="Happy">Happy</option>
+                                <option value="Angry">Angry</option>
+                                <option value="Focused">Focused</option>
+                                <option value="Anxious">Anxious</option>
+                                <option value="Stressed">Stressed</option>
+                            </select>
+                        </div>
+
+                        <!-- Physical Focus Select -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide"><i class="fa-solid fa-dumbbell mr-1"></i> Physical Focus</label>
+                            <select id="select-focus" class="w-full bg-gray-800/80 border border-gray-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all shadow-inner appearance-none cursor-pointer" required>
+                                <option value="" disabled selected>Target area...</option>
+                                <option value="Core">Core</option>
+                                <option value="Lower Body">Lower Body</option>
+                                <option value="Upper Body">Upper Body</option>
+                                <option value="Full Body Cardio">Full Body Cardio</option>
+                                <option value="Active Recovery">Active Recovery</option>
+                                <option value="Flexibility">Flexibility</option>
+                            </select>
+                        </div>
+
+                        <!-- Fitness Level Select -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide"><i class="fa-solid fa-layer-group mr-1"></i> Fitness Level</label>
+                            <select id="select-level" class="w-full bg-gray-800/80 border border-gray-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all shadow-inner appearance-none cursor-pointer" required>
+                                <option value="" disabled selected>Your experience...</option>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button 
+                        type="submit" 
+                        id="send-btn"
+                        class="w-full mt-2 bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-medium rounded-xl py-3.5 transition-all shadow-[0_0_15px_rgba(236,72,153,0.3)] transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        Get Personalized Recommendation
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const sendBtn = document.getElementById('send-btn');
+        const thinkingIndicator = document.getElementById('thinking-indicator');
+        
+        const nameInput = document.getElementById('user-name');
+        const moodSelect = document.getElementById('select-mood');
+        const focusSelect = document.getElementById('select-focus');
+        const levelSelect = document.getElementById('select-level');
+
+        const initialHTML = chatContainer.innerHTML;
+
+async function handleSend(e) {
+            e.preventDefault();
+            
+            // Get selected values
+            const name = nameInput.value.toUpperCase();
+            const mood = moodSelect.value;
+            const focus = focusSelect.value;
+            const level = levelSelect.value;
+
+            if (!name || !mood || !focus || !level) return;
+
+            // Internal Target HR Logic (not displayed, but sent to backend)
+            let targetHr = 120; // Default Beginner
+            if (level === 'Intermediate') targetHr = 130;
+            if (level === 'Advanced') targetHr = 150;
+
+            // 1. Display formatted output for the user's chat bubble
+            const displayMessage = `Generate routine: Mood is ${mood}, Focus is ${focus}, Level is ${level}.`;
+            appendMessage('user', displayMessage);
+            
+            // Format the actual prompt sent to the backend so the agent can parse it easily
+            const agentPayloadMessage = `Recommend a fitness sequence. User Mood: ${mood}. Physical Focus: ${focus}. Fitness Level: ${level}. Target Avg HR is calculated as ${targetHr}.`;
+
+            // 2. Show Loading State
+            setLoading(true);
+
+            // --- Capture user location dynamically via Geolocation API ---
+            let latitude = null;
+            let longitude = null;
+
+            if (navigator.geolocation) {
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true,
+                            timeout: 5000,
+                            maximumAge: 0
+                        });
+                    });
+                    latitude = position.coords.latitude;
+                    longitude = position.coords.longitude;
+                } catch (geoError) {
+                    console.warn("Geolocation denied or timed out. Defaulting server-side.", geoError);
+                }
+            }
+
+            try {
+                // 3. Call the Flask Backend with updated payload
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        message: agentPayloadMessage, 
+                        user_name: name,
+                        lat: latitude,  // Added coordinate properties
+                        lng: longitude 
+                    })
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                // 4. Hide Loading & Append Agent Message
+                setLoading(false);
+                appendMessage('agent', data.agent_reply);
+
+            } catch (error) {
+                console.error("Error communicating with agent:", error);
+                setLoading(false);
+                appendMessage('system', "Connection error: Failed to reach the Backend. Ensure Flask is running.");
+            }
+        }
+        function appendMessage(sender, text) {
+            const msgDiv = document.createElement('div');
+            
+            if (sender === 'user') {
+                msgDiv.className = 'flex gap-4 items-start max-w-[85%] self-end flex-row-reverse';
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center shrink-0 shadow-lg border border-gray-600">
+                        <i class="fa-solid fa-user text-sm text-gray-300"></i>
+                    </div>
+                    <div class="bg-gradient-to-br from-pink-600 to-indigo-600 rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm text-white shadow-md leading-relaxed">
+                        ${escapeHTML(text)}
+                    </div>
+                `;
+            } else if (sender === 'agent') {
+                msgDiv.className = 'flex gap-4 items-start max-w-[85%]';
+                // Basic markdown/bullet formatting
+                let formattedText = escapeHTML(text);
+                
+                // Replace bold **text** with styled strong
+                formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                
+                // Replace inline code `code`
+                formattedText = formattedText.replace(/`(.*?)`/g, '<code class="bg-gray-800 px-1.5 py-0.5 rounded text-pink-300">$1</code>');
+
+                // Convert bullet list lines to HTML bullets
+                const lines = formattedText.split('\n');
+                let inList = false;
+                const processedLines = lines.map(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                        const content = trimmed.substring(2);
+                        let ret = '';
+                        if (!inList) {
+                            ret += '<ul class="list-disc ml-5 mt-2 mb-2 space-y-1">';
+                            inList = true;
+                        }
+                        ret += `<li>${content}</li>`;
+                        return ret;
+                    } else {
+                        let ret = '';
+                        if (inList) {
+                            ret += '</ul>';
+                            inList = false;
+                        }
+                        ret += line;
+                        return ret;
+                    }
+                });
+                if (inList) {
+                    processedLines.push('</ul>');
+                }
+                
+                formattedText = processedLines.join('<br>').replace(/<br><ul/g, '<ul').replace(/<\/ul><br>/g, '</ul>');
+
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center shrink-0 shadow-lg relative">
+                        <i class="fa-solid fa-user-tie text-sm text-white"></i>
+                    </div>
+                    <div class="prose prose-invert bg-gray-900 border border-gray-800 rounded-2xl rounded-tl-sm px-5 py-3.5 text-sm text-gray-200 shadow-md leading-relaxed w-full">
+                        ${formattedText}
+                    </div>
+                `;
+            } else {
+                // Error/System message
+                msgDiv.className = 'flex gap-4 items-center justify-center w-full my-2';
+                msgDiv.innerHTML = `
+                    <div class="px-4 py-2 bg-red-950 border border-red-500/40 text-red-300 text-xs rounded-full flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        ${escapeHTML(text)}
+                    </div>
+                `;
+            }
+
+            chatContainer.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                thinkingIndicator.classList.remove('hidden');
+                thinkingIndicator.classList.add('flex');
+                
+                // Disable inputs while loading
+                moodSelect.disabled = true;
+                focusSelect.disabled = true;
+                levelSelect.disabled = true;
+                sendBtn.disabled = true;
+                
+                scrollToBottom();
+            } else {
+                thinkingIndicator.classList.add('hidden');
+                thinkingIndicator.classList.remove('flex');
+                
+                // Re-enable inputs
+                moodSelect.disabled = false;
+                focusSelect.disabled = false;
+                levelSelect.disabled = false;
+                sendBtn.disabled = false;
+            }
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTo({
+                top: chatContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        function clearChat() {
+            chatContainer.innerHTML = initialHTML;
+            // Reset dropdowns
+            moodSelect.selectedIndex = 0;
+            focusSelect.selectedIndex = 0;
+            levelSelect.selectedIndex = 0;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        }
+    </script>
+</body>
+</html>
