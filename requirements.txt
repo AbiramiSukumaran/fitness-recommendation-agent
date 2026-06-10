@@ -1,0 +1,10 @@
+Flask>=3.0.0
+google-genai>=0.1.0
+mcp>=1.0.0
+google-adk
+toolbox-core
+toolbox-langchain
+python-dotenv
+vertexai>=1.71.0
+pandas
+google-cloud-firestore
