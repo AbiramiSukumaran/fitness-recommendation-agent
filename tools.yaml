@@ -24,7 +24,7 @@ tools:
       predicted_recommended_sequence AS optimal_routine  
       FROM 
       ML.PREDICT( 
-      MODEL `wardrobe.workout_recommender_model`, 
+      MODEL `fitness_dataset.workout_recommender_model`, 
       ( 
       SELECT @usermood AS user_mood, @physicalfocus AS physical_focus, 
       @fitnesslevel AS fitness_level, 
