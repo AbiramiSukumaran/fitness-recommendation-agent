@@ -1,0 +1,38 @@
+# tools.yaml
+sources:
+    bigquery-source:
+            kind: "bigquery"
+            project: "*****"
+            location: "us-central1"
+tools:
+  recommend_workout:
+    kind: bigquery-sql
+    source: bigquery-source
+    description: Recommends a workout based on user's physiological and mindset preferences.
+    parameters:
+      - name: usermood
+        type: string
+        description: "The current mood of the user for which they are requesting a workout routine."
+      - name: physicalfocus
+        type: string
+        description: "The physical focus of the user for which they are requesting a workout routine."
+      - name: fitnesslevel
+        type: string
+        description: "The current fitness level of the user for which they are requesting a workout routine."
+    statement: |
+      SELECT 
+      predicted_recommended_sequence AS optimal_routine  
+      FROM 
+      ML.PREDICT( 
+      MODEL `wardrobe.workout_recommender_model`, 
+      ( 
+      SELECT @usermood AS user_mood, @physicalfocus AS physical_focus, 
+      @fitnesslevel AS fitness_level, 
+      case when @fitnesslevel='Beginner' then 120 
+      when @fitnesslevel='Intermediate' then 130 
+      when @fitnesslevel='Advanced' then 150 end
+      AS target_avg_hr ));
+
+toolsets:
+  fitness_tools:
+    - recommend_workout
